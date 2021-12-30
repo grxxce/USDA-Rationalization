@@ -17,10 +17,13 @@ df = pd.read_csv('USDA_data.csv')
 
 
 # Part 2 Verions 2: Save all unique Mission Areas and Agency IDs to a regions list
-regions = []
+tags = []
 IDColumns = ['Asset - Custom Tags - Copy.2', 'Asset - Custom Tags - Copy.3', 'Asset - Custom Tags - Copy.4', 'Asset - Custom Tags - Copy.5']
 for column in IDColumns:
-    regions.append(df[column].dropna().unique())
+    tags.extend(df[column].dropna().unique())
+# remove duplicates
+tags = list(dict.fromkeys(tags))
+
 
 # Create a new column for every AgencyID, where value is True when AgencyID matches
 # uAgencyID = []
@@ -59,10 +62,11 @@ for column in IDColumns:
 
 
 # Part 3 Version 3: Iterate through regions and applicable ID Columns to create new dataframes grouped by name and usage based on region
-df_usage = {}
-for region in regions:
+for tag in tags:
     for column in IDColumns:
-        df_usage[region] = df.loc[df[column]==region].groupby(['Name', 'Usage']).size()
+        df_usage = df.loc[df[column]==tag].groupby(['Name', 'Usage']).size()
+        if df_usage.size != 0:
+            df_usage.to_excel(tag + "usage.xlsx")
 
     # for column in IDColumns:
     #     region =df.loc[df[column]==region].groupby(['Name', 'Usage']).size()
