@@ -1,6 +1,10 @@
 # Read input data into dataframe df
 import pandas as pd
-df = pd.read_csv('USDA_data.csv')
+
+df = pd.read_excel('USDA_data.xlsx')
+
+# Part 1: Clean data by removing baselining and duplicates
+df = df[df['Usage'] != 'Baselining'].drop_duplicates()
 
 # Part 2: Save all unique Mission Areas and Agency IDs into set tags
 tags = set()
