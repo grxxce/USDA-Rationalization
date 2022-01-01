@@ -1,4 +1,8 @@
+import os
 import pandas as pd
+
+# Data will be outputed to ./results directory
+os.makedirs('./results', exist_ok=True)
 
 # Read input data as DataFrame df
 df = pd.read_excel('USDA_data.xlsx')
