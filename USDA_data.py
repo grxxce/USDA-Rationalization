@@ -30,6 +30,6 @@ for tag in tags:
     for column in id_columns:
         df.loc[df[column] == tag, 'tag_indicator'] = True
     # Create DataFrame grouped by the 'Name' and 'Usage' for the given tag
-    df_usage = df.loc[df['tag_indicator'] == True].groupby(['Name', 'Usage'], as_index=False).size()
+    df_usage = df.loc[df['tag_indicator']].groupby(['Name', 'Usage'], as_index=False).size()
     # Export to '/results/TAG_usage.xlsx' Excel file
     df_usage.to_excel("./results/" + tag + "_usage.xlsx", index=False)
