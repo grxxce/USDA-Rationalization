@@ -1,5 +1,8 @@
-# Read input data into dataframe df
+# Import libraries
+import matplotlib.pyplot as plt
 import pandas as pd
+ 
+# Read input data into dataframe df
 df = pd.read_csv('USDA_data.csv')
 
 # Part 2: Save all unique Mission Areas and Agency IDs into set tags
@@ -15,5 +18,12 @@ for tag in tags:
     for column in IDColumns:
         df.loc[df[column] == tag, 'tag_indicator'] = True
     # Create a df_usage dataframe grouped by the 'Name' and 'Usage' of every 'tag' and export as a new 'tag_usage' excel
-    df_usage = df.loc[df['tag_indicator']==True].groupby(['Name', 'Usage']).size()
+    df_usage = df.loc[df['tag_indicator']==True].groupby(['Name', 'Usage']).size().reset_index()
+    df_usage.rename(columns={df_usage.columns[2]: "Values" }, inplace = True)
+    df_usage = df_usage.pivot(index='Name', columns='Usage', values="Values")
     df_usage.to_excel(tag + "_usage.xlsx")
+
+    # Part 4: Visualize usage data with grouped bar graphs
+    df_usage.plot(kind="bar")
+    plt.show()
+
