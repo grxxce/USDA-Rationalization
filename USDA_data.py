@@ -13,26 +13,8 @@ df = df[df['Usage'] != 'Baselining'].drop_duplicates()
 # Ignore application that skews visualizations
 df = df[df['Name'] != 'Adobe Reader and Acrobat Manager']
 
-# Indicate all columns where tag data may be located
-id_columns = [
-    'Asset - Custom Tags - Copy.2', 
-    'Asset - Custom Tags - Copy.3', 
-    'Asset - Custom Tags - Copy.4', 
-    'Asset - Custom Tags - Copy.5'
-    ]
+# Create DataFrame grouped by 'Name' and 'Usage'
+df_usage = df.groupby(['Name', 'Usage'], as_index=False).size()
 
-# Save all unique Mission Areas and Agency IDs into Set tags
-tags = set()
-for column in id_columns:
-    tags.update(df[column].dropna().unique())
-
-# Iterate through tags
-for tag in tags:
-    # 'tag_indicator' signals if the data has the given tag
-    df['tag_indicator'] = False
-    for column in id_columns:
-        df.loc[df[column] == tag, 'tag_indicator'] = True
-    # Create DataFrame grouped by the 'Name' and 'Usage' for the given tag
-    df_usage = df.loc[df['tag_indicator']].groupby(['Name', 'Usage'], as_index=False).size()
-    # Export to '/results/TAG_usage.xlsx' Excel file
-    df_usage.to_excel("./results/" + tag + "_usage.xlsx", index=False)
+# Export to '/results/aggregate_usage.xlsx' Excel file
+df_usage.to_excel("./results/aggregate_usage.xlsx", index=False)
