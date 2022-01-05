@@ -10,6 +10,9 @@ df = pd.read_excel('USDA_data.xlsx')
 # Clean data by removing baselining and duplicates
 df = df[df['Usage'] != 'Baselining'].drop_duplicates()
 
+# Ignore application that skews visualizations
+df = df[df['Name'] != 'Adobe Reader and Acrobat Manager']
+
 # Indicate all columns where tag data may be located
 id_columns = [
     'Asset - Custom Tags - Copy.2', 
