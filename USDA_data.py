@@ -5,6 +5,12 @@ import os
 # Read input data into dataframe df
 df = pd.read_csv('USDA_data.csv', low_memory=False)
 
+# Clean data by removing baselining and duplicates
+df = df[df['Usage'] != 'Baselining'].drop_duplicates()
+
+# Ignore application that skews visualizations
+df = df[df['Name'] != 'Adobe Reader and Acrobat Manager']
+
 # Save all unique Mission Areas and Agency IDs into set tags
 tags = set()
 # Indicate all columns containing tags and save unique into a set
@@ -34,6 +40,7 @@ for tag in tags:
     df_usage = df_usage.reindex(columns=new_index)
     df_usage.to_excel('./data/' + tag + '_usage.xlsx')
     # Create bar graphs and save as PNGs
-    fig = df_usage.plot(kind='bar', rot=45, figsize=(20, 30))
+    fig = df_usage.plot(kind='bar', rot=45, figsize=(
+        20, 30), color=['b', 'r', 'y', 'g'])
     plt.close()
     fig.figure.savefig('./figures/' + tag + '_bar.png')
