@@ -28,23 +28,57 @@ for column in id_columns:
 os.makedirs('./data', exist_ok=True)
 os.makedirs('./figures', exist_ok=True)
 
-# Iterate through tags
+# Iterate through tags and create new df for every region
 for tag in tags:
     # 'tag_indicator' signals if the data has the given tag
     df['tag_indicator'] = False
     for column in id_columns:
         df.loc[df[column] == tag, 'tag_indicator'] = True
-    # Group df_usage tags by descending usage and export as a new excel
-    df_usage = df.loc[df['tag_indicator']].groupby(['Name', 'Usage'])\
+
+    # Group df by tags by descending usage and export as a new excel
+    df_tag = df.loc[df['tag_indicator']].groupby(['Name', 'Usage'])\
         .size().reset_index()
-    # Pivot the dataframe to display the software usage by usage levels
-    df_usage.rename(columns={df_usage.columns[2]: 'Values'}, inplace=True)
-    df_usage = df_usage.pivot(index='Name', columns='Usage', values='Values')
-    new_index = ['Usage not detected', 'Limited', 'Normal', 'High']
-    df_usage = df_usage.reindex(columns=new_index)
-    df_usage.to_excel('./data/' + tag + '_usage.xlsx')
-    # Create bar graphs and save as PNGs
-    fig = df_usage.plot(kind='bar', rot=45, figsize=(
-        20, 30), color=['b', 'r', 'y', 'g'])
+    df_tag.rename(columns={df_tag.columns[2]: 'Values'}, inplace=True)
+    # TO DO: Reindex 'Usage' to ascending order
+
+    # Set the right axes
+    softwares = set()
+    softwares.update(df_tag['Name'].dropna().unique())
+    softwares = list(softwares)
+    colors = {'High': 'g', 'Normal': 'y',
+              'Limited': 'r', 'Usage not detected': 'k'}
+
+    # Generate the correct number of subplots
+    numRows = len(softwares) // 3
+    if len(softwares) < 3:
+        numRows += 1
+    fig, ax = plt.subplots(nrows=numRows, ncols=3,
+                           squeeze=False, figsize=(20, 40))
+
+    num = 0
+    i = 0
+    for i in range(len(softwares) // 3):
+        j = 0
+        while j < 3 and num < len(softwares):
+            usage = df_tag.loc[df_tag['Name'] == softwares[num], 'Usage']
+            value = df_tag.loc[df_tag['Name'] == softwares[num], 'Values']
+            ax[i, j].bar(usage, value, color=[colors[k] for k in usage])
+            ax[i, j].set_title(softwares[num], fontsize=10)
+            ax[i, j].tick_params(axis='x', labelrotation=30, labelsize=8)
+            ax[i, j].set_xlabel('Usage', fontsize=8)
+            ax[i, j].set_ylabel('Frequency', fontsize=8)
+            num += 1
+            j += 1
+        i += 1
+
+    fig.suptitle(tag + ' usage by software', fontsize=12)
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=0.5, hspace=2)
+    plt.savefig('./figures/' + tag + '_bar.png')
     plt.close()
-    fig.figure.savefig('./figures/' + tag + '_bar.png')
+
+    # Pivot the dataframe to display the software usage by usage levels
+    df_tag = df_tag.pivot(index='Name', columns='Usage', values='Values')
+    new_index = ['Usage not detected', 'Limited', 'Normal', 'High']
+    df_tag = df_tag.reindex(columns=new_index)
+    df_tag.to_excel('./data/' + tag + '_usage.xlsx')
