@@ -50,32 +50,53 @@ for tag in tags:
 
     # Generate the correct number of subplots
     numRows = len(softwares) // 3
-    if len(softwares) < 3:
-        numRows += 1
+    if len(softwares) < 3 and len(softwares) > 0:
+        numRows = 1
     fig, ax = plt.subplots(nrows=numRows, ncols=3,
-                           squeeze=False, figsize=(20, 40))
+                           squeeze=False, figsize=(8, ((len(softwares) // 3) + 1) * 3))
 
-    num = 0
-    i = 0
-    for i in range(len(softwares) // 3):
-        j = 0
-        while j < 3 and num < len(softwares):
-            usage = df_tag.loc[df_tag['Name'] == softwares[num], 'Usage']
-            value = df_tag.loc[df_tag['Name'] == softwares[num], 'Values']
-            ax[i, j].bar(usage, value, color=[colors[k] for k in usage])
-            ax[i, j].set_title(softwares[num], fontsize=10)
-            ax[i, j].tick_params(axis='x', labelrotation=30, labelsize=8)
-            ax[i, j].set_xlabel('Usage', fontsize=8)
-            ax[i, j].set_ylabel('Frequency', fontsize=8)
-            num += 1
-            j += 1
-        i += 1
+    if len(softwares) != 0:
+        # Create bar graphs and export as pngs
+        num = 0
+        i = 0
+        while (i < (len(softwares) // 3) or (i == 0)):
+            j = 0
+            while j < 3 and num < len(softwares):
+                usage = df_tag.loc[df_tag['Name'] == softwares[num], 'Usage']
+                value = df_tag.loc[df_tag['Name'] == softwares[num], 'Values']
+                ax[i, j].bar(usage, value, color=[colors[k] for k in usage])
+                ax[i, j].set_title(softwares[num], fontsize=10)
+                ax[i, j].tick_params(axis='x', labelrotation=30, labelsize=8)
+                ax[i, j].set_xlabel('Usage', fontsize=8)
+                ax[i, j].set_ylabel('Frequency', fontsize=8)
+                num += 1
+                j += 1
+            i += 1
+        fig.suptitle(tag + ' usage by software', fontsize=12)
+        plt.tight_layout()
+        plt.subplots_adjust(wspace=0.5, hspace=2)
+        plt.savefig('./figures/' + tag + '_bar.png')
+        plt.close()
 
-    fig.suptitle(tag + ' usage by software', fontsize=12)
-    plt.tight_layout()
-    plt.subplots_adjust(wspace=0.5, hspace=2)
-    plt.savefig('./figures/' + tag + '_bar.png')
-    plt.close()
+        # Create pie charts and export as pngs
+        num = 0
+        i = 0
+        while (i < (len(softwares) // 3) or (i == 0)):
+            j = 0
+            while j < 3 and num < len(softwares):
+                usage = df_tag.loc[df_tag['Name'] == softwares[num], 'Usage']
+                value = df_tag.loc[df_tag['Name'] == softwares[num], 'Values']
+                ax[i, j].set_title(softwares[num], fontsize=10)
+                ax[i, j].set_xlabel('Usage', fontsize=8)
+                num += 1
+                j += 1
+            i += 1
+        # Label each plot accordingly
+        fig.suptitle(tag + ' usage by software', fontsize=12)
+        plt.tight_layout()
+        plt.subplots_adjust(wspace=0.5, hspace=2)
+        plt.savefig('./figures/' + tag + '_pie.png')
+        plt.close()
 
     # Pivot the dataframe to display the software usage by usage levels
     df_tag = df_tag.pivot(index='Name', columns='Usage', values='Values')
