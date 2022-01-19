@@ -8,46 +8,78 @@ os.makedirs('./data', exist_ok=True)
 df_t = pd.read_excel('Tanium_data.xlsx')
 df_s = pd.read_excel('SCCM_data.xlsx')
 
-# Clean data by removing baselining and duplicates
+# # Clean data by removing baselining and duplicates
 df_t = df_t[df_t['Usage'] != 'Baselining'].drop_duplicates()
 df_t = df_t[df_t['Name'] != 'Adobe Reader and Acrobat Manager']
 
 # Indicate all columns where AgencyID may be located for Tanium
 idColumns = [
     'Asset - Custom Tags.2.1',
-    'Asset - Custom Tags.2.2.1'
+    'Asset - Custom Tags.2.2.1',
+    'Asset - Custom Tags.2.2.2.1',
+    'Asset - Custom Tags.2.2.2.2.1',
+    'Asset - Custom Tags.2.2.2.2.2.1',
+    'Asset - Custom Tags.2.2.2.2.2.2.1',
+    'Asset - Custom Tags.2.2.2.2.2.2.2.1',
+    'Asset - Custom Tags.2.2.2.2.2.2.2.2.2.1'
 ]
 
-# Save all unique Tanium Agency IDs into set idT
-idT_all = set()
-idT = set()
+# Clean all Agency IDs from Tanium data
 for column in idColumns:
-    idT_all.update(df_t[column].dropna().unique())
-idT_all = set([id for id in list(idT_all) if 'AgencyID' in id])
-for id in idT_all:
-    idT.add(id.split('-')[1])
+    df_t[column] = df_t[column].str.replace("AgencyID-", "")
 
-# Save all unique SCCM Agency IDs into set idS
-idS = set()
-idS.update(df_s['Agency'].dropna().unique())
+# REPORT 1: Mismatch Report (SCCM reported Agency ID != at least 1 Tanium reported Agency ID)
+# Schema: Workstation Name, Operating System, SCCM Agency ID, Tanium Agency ID 1, Tanium Agency ID 2, …
 
-# Store work stations in respective set
-workT = set(df_t['Encrypted Workstation Name'])
-workS = set(df_s['Encrypted Workstation Name'])
+# Create a sub-dataframe with desired columns from Tanium and SCCM
+tCols = ['Encrypted Workstation Name', 'Operating System']
+tCols.extend(idColumns)
+df_t_sub = df_t[tCols]
 
-# Store shared and unique work stations
-workShared = workT | workS
-workUniqueT = workT - workShared
-workUniqueS = workS - workShared
+df_s_sub = df_s[['Encrypted Workstation Name', 'Agency', 'OS']]
 
-# REPORT 1: Create a shared work stations dataframe and export to excel
-df_workShared = df_t.merge(
-    df_s, on='Encrypted Workstation Name', how='inner', indicator=True)
-df_workShared.to_excel('./data/shared_work_stations.xlsx')
+# Merge dataframes on workstation and index with workstation
+df_workShared = df_t_sub.merge(
+    df_s_sub, on='Encrypted Workstation Name', how='inner', indicator=True)
+df_workShared.set_index('Encrypted Workstation Name')
 
-# REPORT 2: Create a share work and ID dataframe adn export to to excel
-df_workIdShared = pd.DataFrame()
-for column in idColumns:
-    df_workIdShared.append(df_workShared.loc[(
-        df_workShared['Agency'] == 'AgencyID-' + df_workShared[column])])
-df_workIdShared.to_excel('./data/shared_work_and_IDs.xlsx')
+# version 1: If Agency ID does not equal at least 1 Tanium, add to excel
+df_idMismatch = df_workShared.iloc[0:0]
+
+for index, row in df_workShared.iterrows():
+    print('This is the row:' + row['Encrypted Workstation Name'])
+    mistmatch = False
+    for col in idColumns:
+        if (row['Agency'] != row[col] and not pd.isnull(row[col])):
+            mismatch = True
+            if mismatch:
+                break
+    if mismatch:
+        df_idMismatch.append(df_workShared)
+        print('row appended')
+print('done loading')
+
+print(df_idMismatch)
+df_idMismatch.to_excel('./data/mismatched_usage.xlsx')
+
+# version 2: If Agency ID does not equal at least 1 Tanium, add to excel
+# df_idMismatch = df_workShared.iloc[0:0]
+# for col in idColumns:
+#     df_idMismatch.append(df_workShared.loc[df_workShared['Agency'] != df_workShared[col]])
+# print(df_idMismatch)
+# df_idMismatch.to_excel('./data/mismatched_usage.xlsx')
+
+# REPORT 2: Joint Report (SCCM reported Agency ID == all Tanium reported Agency ID)
+# df_idShared = df_workShared
+# for index, row in df_workShared.iterrows():
+#     for col in idColumns:
+#         if ((df_workShared['Agency'] != df_workShared[col]).any()):
+#             df_idShared = df_idShared.drop(
+#                 row['Encrypted Workstation Name'])
+# print(df_idShared)
+
+# REPORT 3: Only Tanium Report (Workstation Name is only in Tanium)
+# Schema: Workstation Name, Operating System, Tanium Agency ID 1, …
+
+# REPORT 4: Only SCCM Report (Workstation Name is only in SCCM)
+# Schema: Workstation Name, OS, OS Version, SCCM Agency ID
