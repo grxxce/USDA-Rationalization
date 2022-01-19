@@ -90,3 +90,6 @@ df_t_unique.to_excel('./data/tanium_unique.xlsx')
 df_s_unique = df_s_sub.merge(df_t_sub, indicator=True, how='outer').query(
     '_merge=="left_only"').drop('_merge', axis=1)
 df_s_unique.to_excel('./data/sccm_unique.xlsx')
+
+# REPORT 5: Agency workstation reporting for SCCM and Tanium software
+# Schema: Agency, Work #, SCCM Work #, SCCM Work %, Tanium Work #, Tanium Work %, Work # in Both, Both %
