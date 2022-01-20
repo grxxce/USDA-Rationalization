@@ -32,10 +32,9 @@ for col in id_columns:
 # Keep only relevant columns from Tanium and SCCM datasets
 # Group by workstation so each workstation is present only once
 t_cols = ['Encrypted Workstation Name', 'Operating System']
-t_cols.extend(id_columns)
-df_t = df_t[t_cols].groupby('Encrypted Workstation Name').first()
+df_t = df_t[t_cols + id_columns].groupby('Encrypted Workstation Name').first()
 
-s_cols = ['Encrypted Workstation Name', 'Agency', 'OS']
+s_cols = ['Encrypted Workstation Name', 'Agency']
 df_s = df_s[s_cols].groupby('Encrypted Workstation Name').first()
 
 # print('Exporting grouped data to Excel') # TODO: remove
@@ -56,14 +55,18 @@ for col in id_columns:
         (df_joint[col] != df_joint['Agency']), 'Matching'
         ] = False
 
+# Rearrange SCCM Agency ID to front
+sccm_id_col = df_joint.pop('Agency')
+df_joint.insert(1, 'SCCM AgencyID', sccm_id_col)
+
 # REPORT 1: Matching Report (all classifications match)
 print('Exporting matching report to Excel')
-df_joint.loc[df_joint['Matching']] \
+df_joint.loc[df_joint['Matching']].drop(columns='Matching') \
     .to_excel('./data/matching_workstations.xlsx')
 
 # REPORT 2: Mismatch Report (at least one classification does not match)
 print('Exporting mismatching report to Excel')
-df_joint.loc[~df_joint['Matching']] \
+df_joint.loc[~df_joint['Matching']].drop(columns='Matching') \
     .to_excel('./data/mismatching_workstations.xlsx')
 
 # REPORT 3: Only Tanium Report (Workstation Name is only in Tanium)
