@@ -1,9 +1,7 @@
-# Find reports unique in Tanium and SCCM
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import os
-
-os.makedirs('./data', exist_ok=True)
 
 # Import Tanium and SCCM input data as DataFrames
 print('Importing Tanium and SCCM data')
@@ -12,7 +10,19 @@ df_s = pd.read_excel('SCCM_data.xlsx')
 
 print('Cleaning and preparing data')
 
-# Indicate all columns where AgencyID may be located for Tanium
+os.makedirs('./data', exist_ok=True)
+
+# Remove Tanium entries with invalid 'Usage' values
+valid_usages = {
+    'Baselining',
+    'Usage not detected',
+    'Limited',
+    'Normal',
+    'High'
+}
+df_t = df_t[df_t['Usage'].isin(valid_usages)]
+
+# Indicate all Tanium columns containing AgencyIDs
 id_columns = [
     'Asset - Custom Tags.2.1',
     'Asset - Custom Tags.2.2.1',
@@ -37,37 +47,48 @@ df_t = df_t[t_cols + id_columns].groupby('Encrypted Workstation Name').first()
 s_cols = ['Encrypted Workstation Name', 'Agency']
 df_s = df_s[s_cols].groupby('Encrypted Workstation Name').first()
 
-# print('Exporting grouped data to Excel') # TODO: remove
-# df_t.to_excel('./data/df_t_grouped.xlsx')
-# df_s.to_excel('./data/df_s_grouped.xlsx')
-
-# Merge DataFrames on workstation
+# Merge and only keep workstations in both datasets
 print('Merging Tanium and SCCM data')
 df_joint = df_t.merge(df_s, how='inner', on='Encrypted Workstation Name')
-# df_joint.to_excel('./data/df_joint.xlsx')
 
-# 'Matching' indicates SCCM classification matches all Tanium classifications 
-print('Finding matching AgencyID classifications')
+# 'Matching' indicates SCCM Agency ID matches all Tanium Agency IDs
+print('Finding matching Agency ID classifications')
 df_joint['Matching'] = True
 for col in id_columns:
     df_joint.loc[
-        (df_joint[col].str.isalpha()) &
-        (df_joint[col] != df_joint['Agency']), 'Matching'
+        (df_joint[col].str.isalpha()) & (df_joint[col] != df_joint['Agency']),
+        'Matching'
         ] = False
 
 # Rearrange SCCM Agency ID to front
-sccm_id_col = df_joint.pop('Agency')
-df_joint.insert(1, 'SCCM AgencyID', sccm_id_col)
+df_joint.insert(1, 'SCCM Agency ID', df_joint.pop('Agency'))
 
-# REPORT 1: Matching Report (all classifications match)
+# Fill all NaN SCCM Agency IDs with 'None'
+df_joint['SCCM Agency ID'].fillna('None', inplace=True)
+
+# Alphabetize and concatenate all Tanium Agency IDs
+df_joint[id_columns] = np.sort(df_joint[id_columns], axis=1)
+df_joint['Tanium Agency IDs'] = \
+    df_joint[id_columns].agg(lambda row: '-'.join(filter(None, row)), axis=1)
+df_joint.drop(columns=id_columns, inplace=True)
+
+# REPORT 1: SCCM and al Tanium classifications match
 print('Exporting matching report to Excel')
 df_joint.loc[df_joint['Matching']].drop(columns='Matching') \
-    .to_excel('./data/matching_workstations.xlsx')
+    .to_excel('./data/matching_raw.xlsx')
 
-# REPORT 2: Mismatch Report (at least one classification does not match)
+# REPORT 2: At least one classification in Tanium does not match SCCM
 print('Exporting mismatching report to Excel')
-df_joint.loc[~df_joint['Matching']].drop(columns='Matching') \
-    .to_excel('./data/mismatching_workstations.xlsx')
+df_mismatch = df_joint.loc[~df_joint['Matching']].drop(columns='Matching')
+df_mismatch.to_excel('./data/mismatching_raw.xlsx')
+
+# REPORT 3: Mismatches grouped by SCCM Agency ID classification
+df_mismatch.groupby(['SCCM Agency ID', 'Tanium Agency IDs']).count() \
+    .to_excel('./data/mismatching_sccm_grouped.xlsx')
+
+# REPORT 4: Mismatches grouped by Tanium Agency ID classifications
+df_mismatch.groupby(['Tanium Agency IDs', 'SCCM Agency ID']).count() \
+    .to_excel('./data/mismatching_tanium_grouped.xlsx')
 
 # REPORT 3: Only Tanium Report (Workstation Name is only in Tanium)
 # Schema: Workstation Name, Operating System, Tanium Agency ID 1, …
