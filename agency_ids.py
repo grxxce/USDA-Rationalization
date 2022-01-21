@@ -34,10 +34,10 @@ id_columns = [
     'Asset - Custom Tags.2.2.2.2.2.2.2.2.2.1'
 ]
 
-# Clean Agency IDs and Mission Areas from Tanium data
+# Clear all tags without 'AgencyID-' prefix. Remove prefix
 for col in id_columns:
+    df_t.loc[~df_t[col].str.startswith('AgencyID-', na=False), col] = np.nan
     df_t[col] = df_t[col].str.replace('AgencyID-', '')
-    df_t.loc[df_t[col].str.startswith('MissionArea', na=True), col] = ''
 
 # Keep only relevant columns and group by workstation
 t_cols = ['Encrypted Workstation Name', 'Operating System']
@@ -50,27 +50,33 @@ df_s = df_s[s_cols].groupby('Encrypted Workstation Name').first()
 print('Merging Tanium and SCCM data')
 df_inner = df_t.merge(df_s, how='inner', on='Encrypted Workstation Name')
 
+# If SCCM does not indicate Agency ID, mark with 'None'
+df_inner['Agency'].fillna('None', inplace=True)
+
+# If Tanium does not indicate Agency ID, mark with 'None'
+df_inner.loc[df_inner[id_columns].isnull().all(axis=1), id_columns[0]] = 'None'
+
 # 'Matching' indicates SCCM Agency ID matches all Tanium Agency IDs
 print('Comparing Tanium and SCCM Agency ID classifications')
 df_inner['Matching'] = True
 for col in id_columns:
-    # If Tanium entry is non-empty and not equal to SCCM entry, set False
+    # If Tanium entry does not equal SCCM entry, set False
     df_inner.loc[
-        (df_inner[col].str.isalpha()) & (df_inner[col] != df_inner['Agency']),
+        df_inner[col].notna() & (df_inner[col] != df_inner['Agency']),
         'Matching'
         ] = False
 
 # Rearrange SCCM Agency ID to front
 df_inner.insert(1, 'SCCM Agency ID', df_inner.pop('Agency'))
 
-# Fill all NaN SCCM Agency IDs with 'None', for grouping
-df_inner['SCCM Agency ID'].fillna('None', inplace=True)
-
 # Alphabetize and concatenate all Tanium Agency IDs
-df_inner[id_columns] = np.sort(df_inner[id_columns], axis=1)
-df_inner['Tanium Agency IDs'] = \
-    df_inner[id_columns].agg(lambda row: '-'.join(filter(None, row)), axis=1)
-df_inner.drop(columns=id_columns, inplace=True)
+def tanium_concat(df):
+    df = df.copy()
+    df.loc[:, id_columns] = np.sort(df[id_columns].fillna(''), axis=1)
+    df.loc[:, 'Tanium Agency IDs'] = \
+        df[id_columns].agg(lambda row: '-'.join(filter(None, row)), axis=1)
+    return df.drop(columns=id_columns)
+df_inner = tanium_concat(df_inner)
 
 # REPORT 1: SCCM and all Tanium classifications match
 print('Exporting matching classification report (1/7)')
@@ -96,21 +102,23 @@ df_mismatch.groupby(['Tanium Agency IDs', 'SCCM Agency ID']).count() \
 
 df_outer = df_t.merge(
     df_s, how='outer', on='Encrypted Workstation Name', indicator=True
-    )
+)
 
-# REPORT 5: Only Tanium Report (Workstation Name is only in Tanium)
+# REPORT 5: Workstation Name is only in Tanium dataset
 print('Exporting Tanium-only workstations report (5/7)')
-df_outer[df_outer['_merge'] == 'left_only'].drop(columns='_merge') \
-    .to_excel('./data/tanium_unique.xlsx')
+tanium_concat(df_outer[df_outer['_merge'] == 'left_only']) \
+    .drop(columns=['_merge', 'Agency']) \
+    .to_excel('./data/tanium_only.xlsx')
 
-# REPORT 6: Only SCCM Report (Workstation Name is only in SCCM)
+# REPORT 6: Workstation Name is only in SCCM dataset
 print('Exporting SCCM-only workstations report (6/7)')
-df_outer[df_outer['_merge'] == 'right_only'].drop(columns='_merge') \
-    .to_excel('./data/sccm_unique.xlsx')
+df_outer[df_outer['_merge'] == 'right_only'] \
+    .drop(columns=id_columns + ['_merge', 'Operating System']) \
+    .to_excel('./data/sccm_only.xlsx')
 
-# REPORT 7: Agency workstation reporting for SCCM and Tanium
-print('Generating Tanium and SCCM reporting statistics by agency')
-df_stats = pd.DataFrame(columns=['Agency ID', 
+# REPORT 7: Agency workstation coverage for SCCM and Tanium
+print('Generating Tanium and SCCM coverage statistics by agency')
+df_stats = pd.DataFrame(columns=['Agency ID',
                                  'Total Workstations',
                                  'SCCM Workstations',
                                  'SCCM Workstations Proportion',
@@ -125,10 +133,8 @@ unique_ids = set()
 for col in all_id_cols:
     unique_ids.update(df_outer[col].dropna().unique())
 
-# Genegerate statistics DataFrame
-for i, id in enumerate(unique_ids):
-    row = i + 1
-
+# Generate coverage statistics DataFrame
+for row, id in enumerate(unique_ids, 1):
     # Indicate if each workstation belongs to agency 'id'
     df_outer['id_indicator'] = False
     for col in all_id_cols:
@@ -160,5 +166,5 @@ for i, id in enumerate(unique_ids):
 # Sort Agency IDs alphabetically
 df_stats.sort_values(by=['Agency ID'], inplace=True)
 
-print('Exporting workstation reporting statistics (7/7)')
-df_stats.to_excel('./data/workstation_statistics.xlsx', index=False)
+print('Exporting workstation coverage statistics (7/7)')
+df_stats.to_excel('./data/coverage_statistics.xlsx', index=False)
