@@ -46,11 +46,11 @@ df_t = df_t[[workstation_col, os_col_t] + id_cols_t] \
 df_s = df_s[[workstation_col, id_col_s]] \
     .groupby(workstation_col).first()
 
-# If SCCM does not indicate Agency ID, mark with 'None'
-df_s[id_col_s].fillna('None', inplace=True)
-
 # If Tanium does not indicate Agency ID, mark with 'None'
 df_t.loc[df_t[id_cols_t].isnull().all(axis=1), id_cols_t[0]] = 'None'
+
+# If SCCM does not indicate Agency ID, mark with 'None'
+df_s[id_col_s].fillna('None', inplace=True)
 
 # Merge and only keep workstations in both datasets
 print('Merging Tanium and SCCM data')
@@ -111,7 +111,7 @@ tanium_concat(df_outer[df_outer['_merge'] == 'left_only']) \
 # REPORT 6: Workstation Name is only in SCCM dataset
 print('Exporting SCCM-only workstations report (6/7)')
 df_outer[df_outer['_merge'] == 'right_only'] \
-    .drop(columns=id_cols_t + ['_merge', os_col_t]) \
+    .drop(columns=['_merge', os_col_t] + id_cols_t) \
     .to_excel('./data/sccm_only.xlsx')
 
 # REPORT 7: Agency workstation coverage for SCCM and Tanium
@@ -126,16 +126,16 @@ df_stats = pd.DataFrame(columns=['Agency ID',
                                  'Shared Workstations Proportion'])
 
 # Find all unique Agency IDs
-all_id_cols = id_cols_t + [id_col_s]
+id_cols_all = id_cols_t + [id_col_s]
 unique_ids = set()
-for col in all_id_cols:
+for col in id_cols_all:
     unique_ids.update(df_outer[col].dropna().unique())
 
 # Generate coverage statistics DataFrame
 for row, id in enumerate(unique_ids, 1):
     # Indicate if each workstation belongs to agency 'id'
     df_outer['id_indicator'] = False
-    for col in all_id_cols:
+    for col in id_cols_all:
         df_outer.loc[df_outer[col] == id, 'id_indicator'] = True
 
     # Indicate if Tanium workstations belong to agency 'id'
