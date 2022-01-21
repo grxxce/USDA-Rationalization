@@ -77,7 +77,7 @@ df_s_unique = df_s.merge(df_t, on='Encrypted Workstation Name', indicator=True, 
 
 # REPORT 5: Agency workstation reporting for SCCM and Tanium software
 # Schema: Agency, Work #, SCCM Work #, SCCM Work %, Tanium Work #, Tanium Work %, Work # in Both, Both %
-print('Generating Agency Statistics')
+print('Generating agency statistics')
 df_idStats = pd.DataFrame(columns=['Agency', 'Unique Workstations',
                                    'Unique SCCM Workstations',
                                    'Percent Unique SCCM Workstations',
@@ -89,38 +89,39 @@ df_idStats = pd.DataFrame(columns=['Agency', 'Unique Workstations',
 uniqueIds = set()
 allIdCols = ['Agency']
 allIdCols.extend(idColumns)
-
 for col in allIdCols:
     uniqueIds.update(df_workShared[col].dropna().unique())
 
 # Genegerate table
-i = 1
 print('Creating indicator column')
+i = 1
+df_union = df_t.merge(df_s, how='outer', on='Encrypted Workstation Name')
 for id in uniqueIds:
     # Create Shared Work indicator column
-    df_workShared['id_indicator'] = False
+    df_union['id_indicator'] = False
     for col in allIdCols:
-        df_workShared.loc[df_workShared[col] == id, 'id_indicator'] = True
+        df_union.loc[df_union[col] == id, 'id_indicator'] = True
 
     # Create SCCM Work indicator column
-    df_s_unique['id_indicator'] = False
-    df_s_unique.loc[df_s_unique['Agency'] == id, 'id_indicator'] = True
+    df_s['id_indicator'] = False
+    df_s.loc[df_s['Agency'] == id, 'id_indicator'] = True
 
     # Create Tanium Work indicator column
-    df_t_unique['id_indicator'] = False
+    df_t['id_indicator'] = False
     for col in idColumns:
-        df_t_unique.loc[df_t_unique[col] == id, 'id_indicator'] = True
+        df_t.loc[df_t[col] == id, 'id_indicator'] = True
 
     # Calculate statistics for final table
     df_idStats.at[i, 'Agency'] = id
-    uniqueWork = df_workShared['id_indicator'].values.sum()
+
+    uniqueWork = df_union['id_indicator'].values.sum()
     df_idStats.at[i, 'Unique Workstations'] = uniqueWork
 
-    workSCCM = df_s_unique['id_indicator'].values.sum()
+    workSCCM = df_s['id_indicator'].values.sum()
     df_idStats.at[i, 'Unique SCCM Workstations'] = workSCCM
     df_idStats.at[i, 'Percent Unique SCCM Workstations'] = workSCCM/uniqueWork
 
-    workTanium = df_t_unique['id_indicator'].values.sum()
+    workTanium = df_t['id_indicator'].values.sum()
     df_idStats.at[i, 'Unique Tanium Workstations'] = workTanium
     df_idStats.at[i, 'Percent Unique Tanium Workstations'] = workTanium/uniqueWork
 
