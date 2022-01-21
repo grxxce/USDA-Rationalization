@@ -129,4 +129,5 @@ for id in uniqueIds:
     df_idStats.at[i, 'Shared Work Stations'] = sharedWork
     df_idStats.at[i, 'Percent of Shared Workstations'] = sharedWork/uniqueWork
     i += 1
+df_idStats.sort_values(by=['Agency'], inplace=True)
 df_idStats.to_excel('./data/workstation_statistics.xlsx')
