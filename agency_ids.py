@@ -3,11 +3,13 @@ import numpy as np
 import os
 import pandas as pd
 
-# Tanium/SCCM column containing workstation identifier
+# Tanium/SCCM column containing workstation identifiers
 workstation_col = 'Encrypted Workstation Name'
-# Tanium column containing operating system
+# Tanium column containing operating systems
 os_col_t = 'Operating System'
-# SCCM column containing Agency ID
+# Tanium column containing usage values
+usage_col_t = 'Usage'
+# SCCM column containing Agency IDs
 id_col_s = 'Agency'
 # Tanium columns containing Agency IDs
 id_cols_t = [
@@ -33,7 +35,7 @@ os.makedirs('./data', exist_ok=True)
 # Remove Tanium entries with invalid 'Usage' values
 valid_usages = \
     {'Baselining', 'Usage not detected', 'Limited', 'Normal', 'High'}
-df_t = df_t[df_t['Usage'].isin(valid_usages)]
+df_t = df_t[df_t[usage_col_t].isin(valid_usages)]
 
 # Clear all tags without 'AgencyID-' prefix. Remove prefix
 for col in id_cols_t:
@@ -91,13 +93,13 @@ df_mismatch.to_excel('./data/mismatching_raw.xlsx')
 # REPORT 3: Mismatches grouped by SCCM Agency ID classification
 print('Exporting SCCM-grouped mismatching classification report (3/7)')
 df_mismatch.groupby(['SCCM Agency ID', 'Tanium Agency IDs']).count() \
-    .rename(columns={os_col_t: 'Count'}) \
+    .rename(columns={df_mismatch.columns[2]: 'Count'}) \
     .to_excel('./data/mismatching_sccm_grouped.xlsx')
 
 # REPORT 4: Mismatches grouped by Tanium Agency ID classifications
 print('Exporting Tanium-grouped mismatching classification report (4/7)')
 df_mismatch.groupby(['Tanium Agency IDs', 'SCCM Agency ID']).count() \
-    .rename(columns={os_col_t: 'Count'}) \
+    .rename(columns={df_mismatch.columns[2]: 'Count'}) \
     .to_excel('./data/mismatching_tanium_grouped.xlsx')
 
 df_outer = df_t.merge(df_s, how='outer', on=workstation_col, indicator=True)
