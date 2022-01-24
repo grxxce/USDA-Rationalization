@@ -104,17 +104,17 @@ df_mismatch.groupby(['Tanium Agency IDs', 'SCCM Agency ID']).count() \
 
 df_outer = df_t.merge(df_s, how='outer', on=workstation_col, indicator=True)
 
-# REPORT 5: Workstation Name is only in Tanium dataset
-print('Exporting Tanium-only workstations report (5/7)')
-tanium_concat(df_outer[df_outer['_merge'] == 'left_only']) \
-    .drop(columns=['_merge', id_col_s]) \
-    .to_excel('./data/tanium_only.xlsx')
-
-# REPORT 6: Workstation Name is only in SCCM dataset
+# REPORT 5: Workstation Name is only in SCCM dataset
 print('Exporting SCCM-only workstations report (6/7)')
 df_outer[df_outer['_merge'] == 'right_only'] \
     .drop(columns=['_merge', os_col_t] + id_cols_t) \
     .to_excel('./data/sccm_only.xlsx')
+
+# REPORT 6: Workstation Name is only in Tanium dataset
+print('Exporting Tanium-only workstations report (5/7)')
+tanium_concat(df_outer[df_outer['_merge'] == 'left_only']) \
+    .drop(columns=['_merge', id_col_s]) \
+    .to_excel('./data/tanium_only.xlsx')
 
 # REPORT 7: Agency workstation coverage for SCCM and Tanium
 print('Generating Tanium and SCCM coverage statistics by agency')
