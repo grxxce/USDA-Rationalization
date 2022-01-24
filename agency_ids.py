@@ -3,7 +3,7 @@ import numpy as np
 import os
 import pandas as pd
 
-# Tanium/SCCM column containing workstation identifiers
+# SCCM/Tanium column containing workstation identifiers
 workstation_col = 'Encrypted Workstation Name'
 # Tanium column containing operating systems
 os_col_t = 'Operating System'
@@ -23,10 +23,10 @@ id_cols_t = [
     'Asset - Custom Tags.2.2.2.2.2.2.2.2.2.1'
 ]
 
-# Import Tanium and SCCM input data as DataFrames
-print('Importing Tanium and SCCM data')
-df_t = pd.read_excel('tanium.xlsx')
+# Import SCCM and Tanium input data as DataFrames
+print('Importing SCCM and Tanium data')
 df_s = pd.read_excel('sccm.xlsx')
+df_t = pd.read_excel('tanium.xlsx')
 
 print('Cleaning and preparing data')
 
@@ -43,23 +43,23 @@ for col in id_cols_t:
     df_t[col] = df_t[col].str.replace('AgencyID-', '')
 
 # Keep only relevant columns and group by workstation
-df_t = df_t[[workstation_col, os_col_t] + id_cols_t] \
-    .groupby(workstation_col).first()
 df_s = df_s[[workstation_col, id_col_s]] \
     .groupby(workstation_col).first()
-
-# If Tanium does not indicate Agency ID, mark with 'None'
-df_t.loc[df_t[id_cols_t].isnull().all(axis=1), id_cols_t[0]] = 'None'
+df_t = df_t[[workstation_col, os_col_t] + id_cols_t] \
+    .groupby(workstation_col).first()
 
 # If SCCM does not indicate Agency ID, mark with 'None'
 df_s[id_col_s].fillna('None', inplace=True)
 
+# If Tanium does not indicate Agency ID, mark with 'None'
+df_t.loc[df_t[id_cols_t].isnull().all(axis=1), id_cols_t[0]] = 'None'
+
 # Merge and only keep workstations in both datasets
-print('Merging Tanium and SCCM data')
+print('Merging SCCM and Tanium data')
 df_inner = df_t.merge(df_s, how='inner', on=workstation_col)
 
 # 'Matching' indicates SCCM Agency ID matches all Tanium Agency IDs
-print('Comparing Tanium and SCCM Agency ID classifications')
+print('Comparing SCCM and Tanium Agency ID classifications')
 df_inner['Matching'] = True
 for col in id_cols_t:
     # If Tanium entry does not equal SCCM entry, set False
@@ -93,31 +93,31 @@ df_mismatch.to_excel('./data/mismatching_raw.xlsx')
 # REPORT 3: Mismatches grouped by SCCM Agency ID classification
 print('Exporting SCCM-grouped mismatching classification report (3/7)')
 df_mismatch.groupby(['SCCM Agency ID', 'Tanium Agency IDs']).count() \
-    .rename(columns={df_mismatch.columns[2]: 'Count'}) \
+    .rename(columns={os_col_t: 'Count'}) \
     .to_excel('./data/mismatching_sccm_grouped.xlsx')
 
 # REPORT 4: Mismatches grouped by Tanium Agency ID classifications
 print('Exporting Tanium-grouped mismatching classification report (4/7)')
 df_mismatch.groupby(['Tanium Agency IDs', 'SCCM Agency ID']).count() \
-    .rename(columns={df_mismatch.columns[2]: 'Count'}) \
+    .rename(columns={os_col_t: 'Count'}) \
     .to_excel('./data/mismatching_tanium_grouped.xlsx')
 
 df_outer = df_t.merge(df_s, how='outer', on=workstation_col, indicator=True)
 
 # REPORT 5: Workstation Name is only in SCCM dataset
-print('Exporting SCCM-only workstations report (6/7)')
+print('Exporting SCCM-only workstations report (5/7)')
 df_outer[df_outer['_merge'] == 'right_only'] \
     .drop(columns=['_merge', os_col_t] + id_cols_t) \
     .to_excel('./data/sccm_only.xlsx')
 
 # REPORT 6: Workstation Name is only in Tanium dataset
-print('Exporting Tanium-only workstations report (5/7)')
+print('Exporting Tanium-only workstations report (6/7)')
 tanium_concat(df_outer[df_outer['_merge'] == 'left_only']) \
     .drop(columns=['_merge', id_col_s]) \
     .to_excel('./data/tanium_only.xlsx')
 
 # REPORT 7: Agency workstation coverage for SCCM and Tanium
-print('Generating Tanium and SCCM coverage statistics by agency')
+print('Generating SCCM and Tanium coverage statistics by agency')
 df_stats = pd.DataFrame(columns=['Agency ID',
                                  'Total Workstations',
                                  'SCCM Workstations',
