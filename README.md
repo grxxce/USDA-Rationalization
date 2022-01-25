@@ -15,8 +15,8 @@
   * [Report 4: Tanium-grouped mismatching classification report (`mismatching_tanium_grouped.xlsx`)](#report-4-tanium-grouped-mismatching-classification-report-mismatching_tanium_groupedxlsx)
   * [Report 5: SCCM-only workstations report (`sccm_only.xlsx`)](#report-5-sccm-only-workstations-report-sccm_onlyxlsx)
   * [Report 6: Tanium-only workstations report (`tanium_only.xlsx`)](#report-6-tanium-only-workstations-report-tanium_onlyxlsx)
-  * [Report 7: Workstation coverage statistics (`coverage_statistics.xlsx`)](#report-7--workstation-coverage-statistics-coverage_statisticsxlsx)
-- [Reports for `usages.py`](#reports-for_usagespy)
+  * [Report 7: Workstation coverage statistics (`coverage_statistics.xlsx`)](#report-7-workstation-coverage-statistics-coverage_statisticsxlsx)
+- [Reports for `usages.py`](#reports-for-usagespy)
   * [Usage reports as bar graphs and pie charts](#usage-reports-as-bar-graphs-and-pie-charts)
   * [Usage reports as Excel datasets](#usage-reports-as-excel-datasets)
 
@@ -108,7 +108,7 @@ The schema of this file is as follows:
 
 The script will output the resulting Excel file to `data/mismatch_raw.xlsx`.
 
-### Report 3: SCCM-grouped mismatching classification report(`mismatching_sccm_grouped.xlsx`)
+### Report 3: SCCM-grouped mismatching classification report (`mismatching_sccm_grouped.xlsx`)
 This report groups encrypted workstations present in both SCCM and Tanium datasets that have at least one non-matching Agency ID by SCCM Agency ID. It reveals the most common mismatched Tanium workstation classifications for each particular SCCM classificiation.
 
 The schema of this file is as follows:
